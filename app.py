@@ -84,22 +84,22 @@ class VideoProcessor:
         self.detections_for_approx = []
 
         if gt_file and os.path.exists(gt_file):
-            st.info("Chargement du fichier de ground truth téléversé...")
+            st.info("Loading uploaded ground truth file...")
             try:
                 self.evaluator.load_ground_truth(gt_file)
-                st.success("✅ Ground truth chargé avec succès !")
+                st.success("✅ Ground truth loaded successfully!")
             except Exception as e:
-                st.error(f"Échec du chargement du fichier de ground truth : {e}")
-                st.info("Format CSV attendu : frame,x1,y1,x2,y2,class,track_id")
+                st.error(f"Failed to load ground truth file: {e}")
+                st.info("Expected CSV format: frame,x1,y1,x2,y2,class,track_id")
                 return None, None
         elif source == "Sample Video" and os.path.exists("sample_video/traffic_gt.csv"):
-            st.info("Chargement automatique du ground truth pour la vidéo d'exemple...")
+            st.info("Automatically loading ground truth for sample video...")
             try:
                 self.evaluator.load_ground_truth("sample_video/traffic_gt.csv")
-                st.success("✅ Ground truth chargé avec succès !")
+                st.success("✅ Ground truth loaded successfully!")
             except Exception as e:
-                st.error(f"Échec du chargement du ground truth d'exemple : {e}")
-                st.info("Création d'un ground truth approximatif...")
+                st.error(f"Failed to load sample ground truth: {e}")
+                st.info("Creating approximate ground truth...")
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp:
             if isinstance(video_file, bytes):
@@ -109,7 +109,7 @@ class VideoProcessor:
             video_path = tmp.name
 
         if not os.path.exists(video_path):
-            st.error(f"Fichier vidéo temporaire introuvable : {video_path}")
+            st.error(f"Temporary video file not found: {video_path}")
             return None, None
 
         if self.emergency_mode:
@@ -117,7 +117,7 @@ class VideoProcessor:
 
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
-            st.error(f"Impossible d'ouvrir la vidéo : {video_path}")
+            st.error(f"Cannot open video: {video_path}")
             os.remove(video_path)
             return None, None
 
@@ -126,7 +126,7 @@ class VideoProcessor:
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        st.info(f"Traitement de la vidéo : {total_frames} frames à {fps:.1f} FPS")
+        st.info(f"Processing video: {total_frames} frames at {fps:.1f} FPS")
 
         timestamp = int(time.time())
         out_path = f"output/processed_{timestamp}.mp4"
@@ -152,23 +152,23 @@ class VideoProcessor:
             out.write(annotated_frame)
             if live_display:
                 frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
-                live_display.image(frame_rgb, caption=f"Traitement du Frame {stats['frames']}", use_container_width=True, channels="RGB")
-            status_text.text(f"Traitement du frame {stats['frames']}/{total_frames} - Détections : {det_count}")
+                live_display.image(frame_rgb, caption=f"Processing Frame {stats['frames']}", use_container_width=True, channels="RGB")
+            status_text.text(f"Processing frame {stats['frames']}/{total_frames} - Detections: {det_count}")
             progress.progress(stats['frames'] / total_frames)
 
         cap.release()
         out.release()
 
-        # Vérifier si la vidéo traitée a été créée
+        # Check if the processed video was created
         if not os.path.exists(out_path):
-            st.error(f"Échec de la création de la vidéo traitée : {out_path}")
+            st.error(f"Failed to create processed video: {out_path}")
             os.remove(video_path)
             return None, None
 
-        # Convertir la vidéo en H.264 avec audio
+        # Convert the video to H.264 with audio
         converted_path = f"output/converted_{timestamp}.mp4"
         if not os.path.exists(os.path.dirname(converted_path)):
-            st.error(f"Répertoire de sortie inaccessible : {os.path.dirname(converted_path)}")
+            st.error(f"Output directory inaccessible: {os.path.dirname(converted_path)}")
             os.remove(video_path)
             return None, None
 
@@ -186,27 +186,27 @@ class VideoProcessor:
         try:
             result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
             if os.path.exists(converted_path):
-                st.success("Conversion vidéo en H.264 avec audio terminée avec succès !")
+                st.success("Video conversion to H.264 with audio completed successfully!")
             else:
-                st.warning(f"Conversion réussie mais fichier de sortie introuvable : {converted_path}. Utilisation du chemin original : {out_path}")
+                st.warning(f"Conversion succeeded but output file not found: {converted_path}. Using original path: {out_path}")
                 converted_path = out_path
         except subprocess.CalledProcessError as e:
-            st.error(f"Échec de la conversion vidéo : {e.stderr}")
+            st.error(f"Failed to convert video: {e.stderr}")
             converted_path = out_path
         except FileNotFoundError as e:
-            st.error(f"Commande ffmpeg ou fichier introuvable : {e}")
+            st.error(f"ffmpeg command or file not found: {e}")
             converted_path = out_path
 
-        # Générer la heatmap avec le même timestamp
+        # Generate the heatmap with the same timestamp
         heatmap_path = os.path.join("output", f"heatmap_{timestamp}.png")
         if os.path.exists("output/tracking_log.csv"):
             generate_heatmap("output/tracking_log.csv", heatmap_path, width=640, height=480)
             if os.path.exists(heatmap_path):
-                st.success(f"Heatmap générée à {heatmap_path}")
+                st.success(f"Heatmap generated at {heatmap_path}")
             else:
-                st.error(f"Échec de la génération de la heatmap. Vérifiez tracking_log.csv.")
+                st.error(f"Failed to generate heatmap. Check tracking_log.csv.")
         else:
-            st.error("Fichier tracking_log.csv introuvable.")
+            st.error("tracking_log.csv file not found.")
 
         os.remove(video_path)
 
@@ -221,28 +221,28 @@ class VideoProcessor:
                 try:
                     os.remove(tmp_gt_path)
                 except Exception as e:
-                    st.warning(f"Impossible de supprimer le fichier temporaire de ground truth : {e}")
+                    st.warning(f"Could not delete temporary ground truth file: {e}")
 
         stats['class_counts'] = self.class_counts.copy()
         stats['detection_metrics'] = self.evaluator.evaluate_detection()
         stats['tracking_metrics'] = self.evaluator.evaluate_tracking()
 
-        status_text.text("✅ Traitement terminé !")
+        status_text.text("✅ Processing complete!")
         return converted_path, stats
 
 def main():
-    st.markdown("<div class='header'><h1>Détection et suivi d'objets en temps réel dans les vidéos</h1></div>", unsafe_allow_html=True)
+    st.markdown("<div class='header'><h1>Real-time object detection and tracking in videos</h1></div>", unsafe_allow_html=True)
 
     with st.sidebar:
-        st.header("Paramètres")
+        st.header("Settings")
 
-        st.subheader("Sélectionner les classes à détecter")
+        st.subheader("Select Classes to Detect")
         all_classes = [
             "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
             "traffic light", "umbrella", "ambulance"
         ]
 
-        select_all = st.checkbox("Sélectionner toutes les classes", value=True)
+        select_all = st.checkbox("Select All Classes", value=True)
 
         if 'selected_classes' not in st.session_state:
             st.session_state.selected_classes = all_classes.copy()
@@ -258,24 +258,24 @@ def main():
             )
 
         if not st.session_state.selected_classes:
-            st.warning("Veuillez sélectionner au moins une classe à détecter.")
+            st.warning("Please select at least one class to detect.")
             st.session_state.selected_classes = all_classes.copy()
 
         processor = VideoProcessor(selected_classes=st.session_state.selected_classes)
 
-        processor.emergency_mode = st.checkbox("Détecter les véhicules d'urgence", value=False)
-        live_view = st.checkbox("Afficher le traitement en direct", value=True)
-        source = st.radio("Source", ["Télécharger une vidéo", "Vidéo d'exemple"])
-        gt_file = st.file_uploader("Télécharger un fichier CSV de Ground Truth (facultatif)", type=['csv'])
+        processor.emergency_mode = st.checkbox("Detect Emergency Vehicles", value=False)
+        live_view = st.checkbox("Show Live Processing", value=True)
+        source = st.radio("Source", ["Upload Video", "Sample Video"])
+        gt_file = st.file_uploader("Upload Ground Truth CSV (Optional)", type=['csv'])
         if gt_file:
             try:
                 df = pd.read_csv(gt_file)
-                st.write("Aperçu :")
+                st.write("Preview:")
                 st.dataframe(df.head())
-                st.write(f"Forme : {df.shape}")
+                st.write(f"Shape: {df.shape}")
                 gt_file.seek(0)
             except Exception as e:
-                st.error(f"Échec de la lecture du CSV : {e}")
+                st.error(f"Failed to read CSV: {e}")
 
     col1, col2 = st.columns([2, 1])
 
@@ -288,73 +288,73 @@ def main():
             with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp:
                 tmp.write(gt_file.read())
                 gt_path = tmp.name
-        elif source == "Vidéo d'exemple" and os.path.exists("sample_video/traffic_gt.csv"):
+        elif source == "Sample Video" and os.path.exists("sample_video/traffic_gt.csv"):
             gt_path = "sample_video/traffic_gt.csv"
 
-        if source == "Télécharger une vidéo":
-            video_file = st.file_uploader("Télécharger une vidéo", type=['mp4'])
+        if source == "Upload Video":
+            video_file = st.file_uploader("Upload Video", type=['mp4'])
             if video_file:
                 st.video(video_file, format='video/mp4', start_time=0)
-        elif source == "Vidéo d'exemple":
+        elif source == "Sample Video":
             sample_path = "sample_video/traffic.mp4"
             if os.path.exists(sample_path):
                 with open(sample_path, 'rb') as f:
                     video_file = f.read()
                 st.video(sample_path, format='video/mp4', start_time=0)
             else:
-                st.error("Vidéo d'exemple introuvable. Ajoutez traffic.mp4 dans sample_video/")
+                st.error("Sample video not found. Add traffic.mp4 to sample_video/")
 
-        if video_file and st.button("Traiter la vidéo"):
-            with st.spinner("Traitement en cours..."):
+        if video_file and st.button("Process Video"):
+            with st.spinner("Processing..."):
                 video_path, stats = processor.process_video(video_file, live_display, gt_path, source)
                 if video_path and stats:
                     st.session_state['results'] = {'video': video_path, 'stats': stats}
-                    st.success("Terminé !")
+                    st.success("Done!")
                     if live_display:
                         live_display.empty()
                     if gt_path and os.path.exists(gt_path) and gt_file:
                         os.remove(gt_path)
                 else:
-                    st.error("Échec du traitement de la vidéo.")
+                    st.error("Video processing failed.")
 
     with col2:
-        st.header("Métriques")
+        st.header("Metrics")
         if 'results' in st.session_state:
             stats = st.session_state['results']['stats']
-            st.markdown(f"<div class='metric'>Frames traités : {stats['frames']}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='metric'>Détections totales : {stats['detections']}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='metric'>Suivis uniques : {stats['tracks']}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='metric'>Alertes d'urgence : {len(stats['alerts'])}</div>", unsafe_allow_html=True)
-            st.subheader("Détections par classe sélectionnée")
+            st.markdown(f"<div class='metric'>Frames Processed: {stats['frames']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric'>Total Detections: {stats['detections']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric'>Unique Tracks: {stats['tracks']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric'>Emergency Alerts: {len(stats['alerts'])}</div>", unsafe_allow_html=True)
+            st.subheader("Detections by Selected Class")
             for class_name, count in stats['class_counts'].items():
                 if count > 0:
-                    st.markdown(f"<div class='metric'>{class_name.capitalize()} : {count}</div>", unsafe_allow_html=True)
-            st.subheader("Métriques de détection (classes sélectionnées)")
+                    st.markdown(f"<div class='metric'>{class_name.capitalize()}: {count}</div>", unsafe_allow_html=True)
+            st.subheader("Detection Metrics (Selected Classes)")
             det_metrics = stats['detection_metrics']
-            st.markdown(f"<div class='metric'>Précision : {det_metrics['precision']:.3f}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='metric'>Rappel : {det_metrics['recall']:.3f}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='metric'>mAP : {det_metrics['mAP']:.3f}</div>", unsafe_allow_html=True)
-            st.subheader("Métriques de suivi (classes sélectionnées)")
+            st.markdown(f"<div class='metric'>Precision: {det_metrics['precision']:.3f}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric'>Recall: {det_metrics['recall']:.3f}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric'>mAP: {det_metrics['mAP']:.3f}</div>", unsafe_allow_html=True)
+            st.subheader("Tracking Metrics (Selected Classes)")
             track_metrics = stats['tracking_metrics']
-            st.markdown(f"<div class='metric'>MOTA : {track_metrics['MOTA']:.3f}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='metric'>Changements d'ID : {track_metrics['ID_Switches']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric'>MOTA: {track_metrics['MOTA']:.3f}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric'>ID Switches: {track_metrics['ID_Switches']}</div>", unsafe_allow_html=True)
             if stats['alerts']:
-                st.subheader("Alertes")
+                st.subheader("Alerts")
                 for alert in stats['alerts'][:3]:
-                    st.markdown(f"<div class='alert'>Frame {alert['frame']} : {', '.join(alert['objects'])}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='alert'>Frame {alert['frame']}: {', '.join(alert['objects'])}</div>", unsafe_allow_html=True)
             if sum(stats['class_counts'].values()) == 0:
-                st.warning("Aucun objet sélectionné n'a été détecté dans la vidéo.")
+                st.warning("No selected objects were detected in the video.")
 
     if 'results' in st.session_state:
-        st.header("Résultats")
+        st.header("Results")
         video_path = st.session_state['results']['video']
         try:
             with open(video_path, 'rb') as f:
                 st.video(f.read(), format='video/mp4', start_time=0)
         except Exception as e:
-            st.error(f"Échec de l'affichage de la vidéo : {e}. Assurez-vous que le format vidéo est compatible (par exemple, MP4 avec codec H.264).")
+            st.error(f"Failed to display video: {e}. Ensure the video format is compatible (e.g., MP4 with H.264 codec).")
 
-        st.subheader("Tous les objets détectés")
+        st.subheader("All Detected Objects")
         if os.path.exists("output/tracking_log.csv"):
             df = pd.read_csv("output/tracking_log.csv")
             if not df.empty:
@@ -362,33 +362,33 @@ def main():
                 st.dataframe(df[['frame', 'track_id', 'class_name', 'x1', 'y1', 'x2', 'y2', 'confidence', 'speed', 'direction_deg']],
                             column_config={
                                 "frame": "Frame (Timestamp)",
-                                "track_id": "ID de suivi",
-                                "class_name": "Classe",
+                                "track_id": "Track ID",
+                                "class_name": "Class",
                                 "x1": "X1",
                                 "y1": "Y1",
                                 "x2": "X2",
                                 "y2": "Y2",
-                                "confidence": "Confiance",
-                                "speed": "Vitesse (px/frame)",
-                                "direction_deg": "Direction (degrés)"
+                                "confidence": "Confidence",
+                                "speed": "Speed (px/frame)",
+                                "direction_deg": "Direction (degrees)"
                             })
             else:
-                st.warning("Aucune donnée de suivi disponible.")
+                st.warning("No tracking data available.")
         else:
-            st.warning("Journal de suivi introuvable.")
+            st.warning("Tracking log not found.")
 
         heatmap_path = os.path.join("output", f"heatmap_{os.path.basename(video_path).split('_')[1].split('.')[0]}.png")
         if os.path.exists(heatmap_path):
-            st.image(heatmap_path, caption="Heatmap des positions des objets", use_container_width=True)
+            st.image(heatmap_path, caption="Heatmap of Object Positions", use_container_width=True)
         else:
-            st.error(f"Heatmap introuvable à {heatmap_path}. Vérifiez le processus de génération.")
-        if st.button("Générer un rapport PDF"):
+            st.error(f"Heatmap not found at {heatmap_path}. Check the generation process.")
+        if st.button("Generate PDF Report"):
             report_path = generate_pdf_report(st.session_state['results']['stats'])
             with open(report_path, 'rb') as f:
-                st.download_button("Télécharger le rapport", f.read(), file_name=os.path.basename(report_path), mime="application/pdf")
+                st.download_button("Download Report", f.read(), file_name=os.path.basename(report_path), mime="application/pdf")
         if os.path.exists("output/tracking_log.csv"):
             with open("output/tracking_log.csv", 'rb') as f:
-                st.download_button("Télécharger le journal", f.read(), file_name="tracking_log.csv", mime="text/csv")
+                st.download_button("Download Log", f.read(), file_name="tracking_log.csv", mime="text/csv")
 
 if __name__ == "__main__":
     main()
