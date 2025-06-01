@@ -1,0 +1,12 @@
+streamlit
+opencv-python
+ultralytics
+numpy
+pandas
+scikit-learn
+scipy
+reportlab
+seaborn
+matplotlib
+librosa
+ffmpeg
